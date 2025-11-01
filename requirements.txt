@@ -1,0 +1,6 @@
+flask>=3,<4
+pillow>=10,<12
+numpy==1.23.5
+imageio>=2.31,<2.35
+rawpy>=0.19
+opencv-python>=4.7

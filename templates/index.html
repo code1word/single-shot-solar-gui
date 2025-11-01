@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Single Shot Solar Forecast</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+
+    <!-- Font Awesome (icons) -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <header>
+      <div class="header-row">
+        <div class="brand">
+          <span class="brand-badge" aria-hidden="true">
+            <i class="fa-solid fa-solar-panel"></i>
+          </span>
+          <div class="brand-copy">
+            <h1>Single Shot Solar Forecast</h1>
+            <p class="subtitle">
+              Upload a hemispherical photo, set panel orientation, tap 3 sky
+              points, and get a site-specific solar yield forecast.
+            </p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stepper -->
+    <nav class="stepper" aria-label="Progress">
+      <div class="step active" data-step="1">
+        <div class="dot"><span>1</span></div>
+        <div class="label">
+          <i class="fa-solid fa-file-arrow-up"></i> Upload
+        </div>
+      </div>
+      <div class="rail"></div>
+      <div class="step" data-step="2">
+        <div class="dot"><span>2</span></div>
+        <div class="label"><i class="fa-solid fa-compass"></i> Orient</div>
+      </div>
+      <div class="rail"></div>
+      <div class="step" data-step="3">
+        <div class="dot"><span>3</span></div>
+        <div class="label">
+          <i class="fa-solid fa-cloud-sun"></i> Sky Aperture
+        </div>
+      </div>
+      <div class="rail"></div>
+      <div class="step" data-step="4">
+        <div class="dot"><span>4</span></div>
+        <div class="label"><i class="fa-solid fa-chart-line"></i> Forecast</div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- STEP 1: Upload -->
+      <section class="card step-pane active" data-step="1">
+        <h2><i class="fa-solid fa-file-arrow-up"></i> Upload Image</h2>
+        <p class="section-subtitle">
+          Upload a dual-hemispherical photo of your site. You’ll be prompted to
+          choose which hemisphere to proceed with. Drag and drop or use the file
+          picker below, then wait for the upload to finish before moving on.
+          <button
+            id="dualInfoBtn"
+            class="info-link"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="dualInfoModal"
+          >
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            What is a dual-hemispherical image?
+          </button>
+        </p>
+        <div
+          id="dropzone"
+          class="dropzone"
+          role="button"
+          tabindex="0"
+          aria-label="Upload image"
+        >
+          <p>Drag & drop a .dng, .exr, .png, or .jpg<br /><span>or</span></p>
+          <label class="btn">
+            <i class="fa-solid fa-upload"></i> Choose a file
+            <input
+              type="file"
+              id="fileInput"
+              accept=".dng,.exr,.png,.jpg,.jpeg"
+              hidden
+            />
+          </label>
+          <div id="uploadStatus" class="status"></div>
+        </div>
+        <div class="wizard-nav">
+          <button id="nextFromUpload" class="btn primary" disabled>
+            Next: Orient <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 2: Orient -->
+      <section class="card step-pane" data-step="2">
+        <h2><i class="fa-solid fa-compass"></i> Adjust Panel Orientation</h2>
+        <p class="section-subtitle">
+          The preview below is preset to an ideal orientation; use the sliders
+          or type exact values to tweak the azimuth, zenith, and roll as needed.
+          You can also use the arrow keys to nudge by 1°.
+        </p>
+        <div class="grid">
+          <div class="canvas-wrap">
+            <canvas id="orientationCanvas" width="512" height="512"></canvas>
+            <div id="renderingBadge" class="badge" hidden>
+              <i class="fa-solid fa-circle-notch fa-spin"></i> Rendering…
+            </div>
+          </div>
+          <div class="controls">
+            <div class="control">
+              <label for="azimuth">Azimuth (°)</label>
+              <input type="range" id="azimuth" min="0" max="360" value="0" />
+              <input
+                type="number"
+                id="azimuthNum"
+                min="0"
+                max="360"
+                value="0"
+              />
+            </div>
+            <div class="control">
+              <label for="zenith">Zenith (°)</label>
+              <input type="range" id="zenith" min="0" max="180" value="0" />
+              <input type="number" id="zenithNum" min="0" max="180" value="0" />
+            </div>
+            <div class="control">
+              <label for="roll">Roll (°)</label>
+              <input type="range" id="roll" min="-180" max="180" value="0" />
+              <input
+                type="number"
+                id="rollNum"
+                min="-180"
+                max="180"
+                value="0"
+              />
+            </div>
+            <div class="hint">
+              <i class="fa-regular fa-keyboard"></i> Use arrow keys for ±1°
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn secondary" data-back>
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <button id="nextFromOrient" class="btn primary" disabled>
+            Next: Sky Aperture <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 3: Sky Aperture -->
+      <section class="card step-pane" data-step="3">
+        <h2><i class="fa-solid fa-cloud-sun"></i> Identify the Sky Aperture</h2>
+        <p class="section-subtitle">
+          Select three points in your image that lie on the sky. We will use
+          these to segment the visible sky — the “sky aperture” — for the
+          forecast. Click on the circular canvas to place your points, and clear
+          and reselect as needed. After you set the points, we generate three
+          segmentation options; choose the one that best matches the sky to
+          continue.
+        </p>
+        <div class="grid">
+          <div class="canvas-wrap">
+            <canvas id="apertureCanvas" width="512" height="512"></canvas>
+            <div class="overlay-text" id="pointsHint">Click 3 points (0/3)</div>
+          </div>
+          <div class="controls">
+            <div class="buttons">
+              <button id="clearPoints" class="btn ghost" disabled>
+                <i class="fa-solid fa-delete-left"></i> Clear points
+              </button>
+              <button id="segmentBtn" class="btn primary" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Segment Sky
+                (preview)
+              </button>
+            </div>
+            <p class="small">
+              Pick 3 points to mark the sky. We’ll segment the current view and
+              show a downloadable PNG. The <strong>Forecast</strong> step uses
+              these 3 points and your current angles.
+            </p>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn secondary" data-back>
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <button id="nextFromAperture" class="btn primary" disabled>
+            Next: Forecast <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- STEP 4: Forecast -->
+      <section class="card step-pane" data-step="4">
+        <h2><i class="fa-solid fa-chart-line"></i> Forecast</h2>
+        <p class="small">
+          Uses your uploaded image, current <em>azimuth / zenith / roll</em>,
+          and the 3 sky points.
+        </p>
+        <div class="wizard-nav">
+          <button class="btn secondary" data-back>
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+          <button id="forecastBtn" class="btn primary">
+            <i class="fa-solid fa-bolt"></i> Run Forecast
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Segmentation preview -->
+    <dialog id="resultModal">
+      <h3><i class="fa-solid fa-layer-group"></i> Segmented Sky</h3>
+      <img id="resultImg" alt="Segmented Sky" />
+      <div class="buttons">
+        <a id="downloadLink" class="btn primary" download="sky.png"
+          ><i class="fa-solid fa-download"></i> Download PNG</a
+        >
+        <button id="closeModal" class="btn ghost">
+          <i class="fa-regular fa-circle-xmark"></i> Close
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Info: Dual-hemispherical example -->
+    <dialog id="dualInfoModal" class="info-modal">
+      <div class="info-modal__header">
+        <h3>
+          <i class="fa-solid fa-circle-info"></i> Dual-Hemispherical Images
+        </h3>
+        <button
+          id="dualInfoClose"
+          class="btn ghost"
+          type="button"
+          aria-label="Close"
+        >
+          <i class="fa-regular fa-circle-xmark"></i>
+          Close
+        </button>
+      </div>
+      <p class="small" style="font-size: 16px">
+        A dual-hemispherical image contains two fisheye views captured from the
+        same point—one for the front hemisphere and one for the back. After
+        upload you’ll choose which hemisphere to continue with. Cameras like the
+        Ricoh THETA can produce this format; just capture a dual-fisheye view
+        (or export to it with their software) so both hemispheres are preserved.
+      </p>
+      <img
+        src="/static/example-hemispherical-image.png"
+        alt="Example of a dual-hemispherical image showing two adjacent fisheye circles"
+        class="info-modal__img"
+      />
+    </dialog>
+
+    <!-- Hemisphere Picker -->
+    <dialog id="hemispherePicker" class="hemi-modal">
+      <div class="hemi-header">
+        <h3><i class="fa-regular fa-image"></i> Choose a Hemisphere</h3>
+        <p class="small" style="font-size: 16px">
+          Your image contains two fisheye halves side-by-side. Pick the half you
+          want to use.
+        </p>
+      </div>
+      <div class="hemi-grid">
+        <div class="hemi-card">
+          <canvas
+            id="hemiLeft"
+            width="360"
+            height="360"
+            aria-label="Left hemisphere preview"
+          ></canvas>
+        </div>
+        <div class="hemi-card">
+          <canvas
+            id="hemiRight"
+            width="360"
+            height="360"
+            aria-label="Right hemisphere preview"
+          ></canvas>
+        </div>
+      </div>
+      <div
+        class="wizard-nav"
+        style="justify-content: flex-start; margin-top: 12px"
+      >
+        <button id="hemiCancel" type="button" class="btn ghost">
+          <i class="fa-regular fa-circle-xmark"></i> Cancel
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Full-screen Forecast -->
+    <dialog id="forecastModal" class="forecast-modal">
+      <div class="forecast-header">
+        <h3><i class="fa-solid fa-chart-line"></i> Solar Forecast: Results</h3>
+        <button id="closeForecast" class="btn ghost">
+          <i class="fa-regular fa-circle-xmark"></i> Close
+        </button>
+      </div>
+      <div id="forecastContent" class="forecast-content">
+        <div class="stats">
+          <div class="stat">
+            <span class="k">Annual Energy</span><span class="v">— kWh</span>
+          </div>
+          <div class="stat">
+            <span class="k">Model</span><span class="v">YourModelName</span>
+          </div>
+          <div class="stat">
+            <span class="k">Orientation</span
+            ><span class="v" id="fc-orient">az 0°, ze 0°, roll 0°</span>
+          </div>
+        </div>
+        <div class="plots">
+          <div class="plot-card">
+            <h4>
+              <i class="fa-solid fa-chart-column"></i> Monthly Yield (dummy)
+            </h4>
+            <div class="bars" id="fc-monthly"></div>
+          </div>
+          <div class="plot-card">
+            <h4>
+              <i class="fa-regular fa-image"></i> Sky Aperture Mask (preview)
+            </h4>
+            <div class="mask-preview">
+              <canvas id="maskPreview" width="300" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="notes small">
+          Placeholder content; we need to supply algorithm in
+          <code>engine.forecast_energy_impl(...)</code>.
+        </div>
+      </div>
+    </dialog>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
